@@ -9,6 +9,7 @@
 
 #ifndef __LOG_H__
 #define __LOG_H__
+
 #include <cassert>
 #include <iostream>
 #include <fstream>
@@ -35,7 +36,7 @@ namespace keywords = boost::log::keywords;
 
 
 
-namespace LOGGING
+namespace ADRO_LOG 
 {
     enum LogLevel
     {
@@ -45,8 +46,7 @@ namespace LOGGING
         error , 
         critical 
     };
-
-    std::ostream& operator<< (std::ostream& strm, LogLevel level)
+    inline std::ostream& operator<< (std::ostream& strm, LogLevel level)
     {
         static const char* strings[] =
         {
@@ -72,7 +72,7 @@ namespace LOGGING
 
 
 BOOST_LOG_INLINE_GLOBAL_LOGGER_DEFAULT(g_logger, src::logger_mt); 
-BOOST_LOG_ATTRIBUTE_KEYWORD(severity, "Severity", Marzban::LogLevel);
+BOOST_LOG_ATTRIBUTE_KEYWORD(severity, "Severity", ADRO_LOG::LogLevel);
 BOOST_LOG_ATTRIBUTE_KEYWORD(tag_attr, "Tag", std::string);
 BOOST_LOG_ATTRIBUTE_KEYWORD(timestamp, "TimeStamp", boost::posix_time::ptime)
 
@@ -88,14 +88,24 @@ namespace LOGGING{
      */
     class Info {
         public :
+			src::severity_logger< ADRO_LOG::LogLevel > slg;
+			std::ostringstream buf; 
+
+			Info(){
+                slg.add_attribute("Tag", attrs::constant< std::string >("ADRO RTB"));
+			}
+	
+			~Info(){
+                BOOST_LOG_SEV(slg , ADRO_LOG::info) << buf.str(); 
+			}
+			
             template<typename T>
             Info &operator<<(const T &t)
             {
-                src::severity_logger< LogLevel > slg;
-                slg.add_attribute("Tag", attrs::constant< std::string >("Marzban"));
-                BOOST_LOG_SEV(slg , info) << t ; 
+				buf << t; 
                 return * this ; 
             }
+
 
     };
 
@@ -108,12 +118,18 @@ namespace LOGGING{
      */
     class Debug {
         public :
+			src::severity_logger< ADRO_LOG::LogLevel > slg;
+			std::ostringstream buf; 
+			Debug(){
+                slg.add_attribute("Tag", attrs::constant< std::string >("ADRO RTB"));
+			}
+			~Debug(){
+                BOOST_LOG_SEV(slg , ADRO_LOG::debug) << buf.str() ; 
+			}
             template<typename T>
             Debug &operator<<(const T &t)
             {
-                src::severity_logger< LogLevel > slg;
-                slg.add_attribute("Tag", attrs::constant< std::string >("Marzban"));
-                BOOST_LOG_SEV(slg , debug) << t ; 
+				buf << t ;
                 return * this ; 
             }
 
@@ -128,12 +144,18 @@ namespace LOGGING{
      */
     class Warn {
         public :
+			src::severity_logger< ADRO_LOG::LogLevel > slg;
+			std::ostringstream buf; 
+			Warn(){
+                slg.add_attribute("Tag", attrs::constant< std::string >("ADRO RTB"));
+			}
+			~Warn(){
+                BOOST_LOG_SEV(slg , ADRO_LOG::warning) << buf.str() ; 
+			}
             template<typename T>
             Warn &operator<<(const T &t)
             {
-                src::severity_logger< LogLevel > slg;
-                slg.add_attribute("Tag", attrs::constant< std::string >("Marzban"));
-                BOOST_LOG_SEV(slg , warning) << t ; 
+				buf << t;
                 return * this ; 
             }
 
@@ -147,12 +169,18 @@ namespace LOGGING{
      */
     class Error {
         public :
+			src::severity_logger< ADRO_LOG::LogLevel > slg;
+			std::ostringstream buf; 
+			Error(){
+                slg.add_attribute("Tag", attrs::constant< std::string >("ADRO RTB"));
+			}
+			~Error(){
+                BOOST_LOG_SEV(slg , ADRO_LOG::error) << buf.str() ; 
+			}
             template<typename T>
             Error &operator<<(const T &t)
             {
-                src::severity_logger< LogLevel > slg;
-                slg.add_attribute("Tag", attrs::constant< std::string >("Marzban"));
-                BOOST_LOG_SEV(slg , error) << t ; 
+				buf << t ; 
                 return * this ; 
             }
 
@@ -167,12 +195,18 @@ namespace LOGGING{
      */
     class Crit {
         public :
+			src::severity_logger< ADRO_LOG::LogLevel > slg;
+			std::ostringstream buf; 
+			Crit(){
+                slg.add_attribute("Tag", attrs::constant< std::string >("ADRO RTB"));
+			}
+			~Crit(){
+                BOOST_LOG_SEV(slg , ADRO_LOG::critical) << buf.str() ; 
+			}
             template<typename T>
             Crit &operator<<(const T &t)
             {
-                src::severity_logger< LogLevel > slg;
-                slg.add_attribute("Tag", attrs::constant< std::string >("Marzban"));
-                BOOST_LOG_SEV(slg , critical) << t ; 
+				buf << t ; 
                 return * this ; 
             }
 
@@ -189,7 +223,7 @@ namespace LOGGING{
 
             //init logging tools such as create sink , 
             //define streams and add them to sink, etc.
-            static void init();
+            static inline void init();
     
     };
 
@@ -203,7 +237,7 @@ namespace LOGGING{
      * add them to sink 
      *
      */
-    void Log::init()
+    inline void Log::init()
     {
         using boost::shared_ptr;
         //defines text_ostream_backend for sink and declater an instance 
@@ -218,16 +252,12 @@ namespace LOGGING{
 
             //TODO : ezafe kardan mahdodyate size 
             //declare file name and size and rotation 
-            shared_ptr< std::ofstream > pStream2(new std::ofstream("sample.log"));
+            shared_ptr< std::ofstream > pStream2(new std::ofstream("sampleMajid.log"));
             assert(pStream2->is_open());
-            pBackend->add_stream(pStream2);
+//            pBackend->add_stream(pStream2);
         }
 
 
-        logging::core::get()->set_filter
-            (
-                severity >= Marzban::info
-            );
         pSink->set_formatter(
                     expr::stream 
                     << "[" << severity << "] " 
@@ -238,6 +268,10 @@ namespace LOGGING{
                 );
 
         //add modified sink to core logging 
+        logging::core::get()->set_filter
+		(
+			severity >= ADRO_LOG::info
+		);
         logging::core::get()->add_sink(pSink);
         logging::add_common_attributes();
     }
